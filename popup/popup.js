@@ -8,6 +8,7 @@
   const errorDetail  = document.getElementById('errorDetail');
   const searchBtn    = document.getElementById('searchBtn');
   const viewBtn      = document.getElementById('viewBtn');
+  const clearBtn     = document.getElementById('clearBtn');
   const kwInput      = document.getElementById('kwInput');
   const kwAddBtn     = document.getElementById('kwAddBtn');
   const kwTags       = document.getElementById('kwTags');
@@ -174,6 +175,19 @@
 
   viewBtn.addEventListener('click', () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('results/results.html') });
+  });
+
+  clearBtn.addEventListener('click', () => {
+    chrome.storage.local.set({
+      discordFinderStats:   { searched: 0, total: 0, found: 0, status: 'idle' },
+      discordFinderResults: [],
+    }, () => {
+      clearError();
+      progressText.textContent = 'Ready';
+      progressFill.style.width = '0%';
+      viewBtn.disabled = true;
+      renderStats();
+    });
   });
 
   // ─── Live updates from storage ───────────────────────────────────────────

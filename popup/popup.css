@@ -348,6 +348,15 @@ body {
 .btn-secondary:hover:not(:disabled) { background: var(--border); }
 .btn-secondary:not(:disabled) { opacity: 1; }
 
+.btn-clear {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  padding: 9px 16px;
+}
+.btn-clear:hover { background: var(--bg-secondary); color: var(--text-secondary); border-color: var(--text-muted); }
+
 /* ── Footer ─────────────────────────────────────────────────────────── */
 .popup-footer {
   padding-top: 10px;

@@ -164,31 +164,34 @@
 
   // ─── DATA EXTRACTION ─────────────────────────────────────────────────────
 
-  // Display Name: extracted from the dialog aria-label "[Name]'s profile"
-  // Discord may use a curly apostrophe (') instead of straight (')
+  // Display Name: Discord uses a div with class containing "nickname" for the display name
+  // (e.g. div.nickname_63ed3 or heading-lg/bold + nickname)
   function extractDisplayName(panel) {
-    const label = panel.getAttribute('aria-label') || '';
-    // Match any apostrophe variant before "s profile"
-    const m = label.match(/^(.+?)[\u2019\u2018\u02BC']s\s+profile\s*$/i);
-    if (m) return m[1].trim();
-
-    // Fallback A: strip the " profile" tail any way it comes
-    if (/\s+profile\s*$/i.test(label)) {
-      return label.replace(/[\u2019\u2018\u02BC']s\s+profile\s*$/i, '')
-                  .replace(/\s+profile\s*$/i, '').trim();
+    // Method 1: Discord's nickname element — most reliable (same approach as userTagUsername)
+    const nicknameEl = panel.querySelector('[class*="nickname"]');
+    if (nicknameEl) {
+      const t = (nicknameEl.textContent || '').trim();
+      if (t && t.length >= 1 && t.length < 60) return t;
     }
 
-    // Fallback B: "Message @DisplayName" placeholder or aria-label on the message box
-    const msgEl = panel.querySelector(
-      '[placeholder*="Message @"], [aria-label*="Message @"]'
-    );
+    // Method 2: dialog aria-label "[Name]'s profile" (curly or straight apostrophe)
+    const label = panel.getAttribute('aria-label') || '';
+    const m = label.match(/^(.+?)[\u2019\u2018\u02BC']s\s+profile\s*$/i);
+    if (m) return m[1].trim();
+    if (/\s+profile\s*$/i.test(label)) {
+      const name = label.replace(/[\u2019\u2018\u02BC']s\s+profile\s*$/i, '').replace(/\s+profile\s*$/i, '').trim();
+      if (name) return name;
+    }
+
+    // Method 3: "Message @DisplayName" placeholder
+    const msgEl = panel.querySelector('[placeholder*="Message @"], [aria-label*="Message @"]');
     if (msgEl) {
       const attr = msgEl.getAttribute('placeholder') || msgEl.getAttribute('aria-label') || '';
       const pm = attr.match(/Message\s+@(.+)/i);
       if (pm) return pm[1].trim();
     }
 
-    // Fallback C: first h1/h2 that is not "Bio" and doesn't end with "profile"
+    // Method 4: first h1/h2 that is not "Bio" and doesn't end with "profile"
     for (const h of panel.querySelectorAll('h1, h2')) {
       const t = (h.textContent || '').trim();
       if (t && t.length < 60 && !/^bio$/i.test(t) && !/profile$/i.test(t)) return t;
