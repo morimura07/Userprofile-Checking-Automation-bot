@@ -1,0 +1,4 @@
+/* Optional: inject minimal styles if we add any in-page UI later */
+.discord-profile-finder-injected {
+  all: initial;
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord Profile Finder</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup">
+    <header class="popup-header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <h1>Profile Finder</h1>
+      </div>
+      <p class="subtitle">Find CEOs, Founders, CTOs & more</p>
+    </header>
+
+    <main class="popup-main">
+      <div class="stats-card" id="statsCard">
+        <div class="stat-row">
+          <span class="stat-label">Searched</span>
+          <span class="stat-value" id="searchedCount">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-row">
+          <span class="stat-label">Total</span>
+          <span class="stat-value" id="totalCount">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-row">
+          <span class="stat-label">Found</span>
+          <span class="stat-value stat-highlight" id="foundCount">0</span>
+        </div>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <span class="progress-text" id="progressText">Ready</span>
+        <span class="error-detail" id="errorDetail" title="Error details"></span>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="searchBtn">
+          <span class="btn-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </span>
+          Search User Profiles
+        </button>
+        <button type="button" class="btn btn-secondary" id="viewBtn" disabled>
+          <span class="btn-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          </span>
+          View Results
+        </button>
+      </div>
+    </main>
+
+    <footer class="popup-footer">
+      <p>Run this on a Discord channel page with the member list visible.</p>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

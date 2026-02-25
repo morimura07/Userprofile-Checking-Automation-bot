@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord Profile Finder — Results</title>
+  <link rel="stylesheet" href="results.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <h1>Profile Finder Results</h1>
+        </div>
+        <p class="header-sub">Users matching CEO, Founder, CTO, Project Manager, Looking for Developer</p>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="summary" id="summary">
+        <span class="summary-count" id="foundCount">0</span> users found
+        <span class="summary-hint">Click a row to copy username to clipboard</span>
+      </div>
+
+      <div class="table-wrap" id="tableWrap">
+        <table class="table" id="resultsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Display Name</th>
+              <th>Username (ID)</th>
+              <th>Role</th>
+              <th>Profile</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty-state" id="emptyState">
+        <p>No matching profiles yet. Run a search from the extension on a Discord channel.</p>
+      </div>
+    </main>
+
+    <div class="toast" id="toast">Copied to clipboard</div>
+  </div>
+  <script src="results.js"></script>
+</body>
+</html>
