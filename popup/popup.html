@@ -21,6 +21,8 @@
     </header>
 
     <main class="popup-main">
+
+      <!-- Stats -->
       <div class="stats-card" id="statsCard">
         <div class="stat-row">
           <span class="stat-label">Searched</span>
@@ -38,6 +40,7 @@
         </div>
       </div>
 
+      <!-- Progress -->
       <div class="progress-wrap" id="progressWrap">
         <div class="progress-bar">
           <div class="progress-fill" id="progressFill"></div>
@@ -46,6 +49,28 @@
         <span class="error-detail" id="errorDetail" title="Error details"></span>
       </div>
 
+      <!-- Keyword manager -->
+      <div class="kw-section">
+        <div class="kw-section-header">
+          <span class="kw-label">Search Keywords</span>
+          <span class="kw-counter" id="kwCounter">0 / 10</span>
+        </div>
+        <div class="kw-input-row">
+          <input
+            type="text"
+            id="kwInput"
+            class="kw-input"
+            placeholder="Add keyword..."
+            maxlength="50"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button type="button" class="btn-add" id="kwAddBtn">Add</button>
+        </div>
+        <div class="kw-tags" id="kwTags"></div>
+      </div>
+
+      <!-- Action buttons -->
       <div class="actions">
         <button type="button" class="btn btn-primary" id="searchBtn">
           <span class="btn-icon">
@@ -60,10 +85,11 @@
           View Results
         </button>
       </div>
+
     </main>
 
     <footer class="popup-footer">
-      <p>Run this on a Discord channel page with the member list visible.</p>
+      <p>Open a Discord channel with the member list visible, then click Search.</p>
     </footer>
   </div>
   <script src="popup.js"></script>

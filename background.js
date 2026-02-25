@@ -9,7 +9,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   chrome.scripting.executeScript({ target, files: ['content/content.js'] })
     .then(() => chrome.scripting.insertCSS({ target, files: ['content/content.css'] }))
     .then(() => new Promise((r) => setTimeout(r, 1200)))
-    .then(() => chrome.tabs.sendMessage(tabId, { type: 'START_SEARCH' }))
+    .then(() => chrome.tabs.sendMessage(tabId, { type: 'START_SEARCH', keywords: msg.keywords || [] }))
     .then(() => sendResponse({ ok: true }))
     .catch((err) => {
       const msg = err?.message || String(err);

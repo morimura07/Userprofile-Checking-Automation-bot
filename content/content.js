@@ -13,7 +13,8 @@
         sendResponse({ ok: false, error: 'not app frame' });
         return true;
       }
-      runSearch().catch(console.error);
+      const kw = (msg.keywords && msg.keywords.length > 0) ? msg.keywords : DEFAULT_KEYWORDS;
+      runSearch(kw).catch(console.error);
       sendResponse({ ok: true });
     } else if (msg.type === 'ABORT_SEARCH') {
       abortRequested = true;
@@ -23,19 +24,20 @@
   });
 
   // ─── CONSTANTS ────────────────────────────────────────────────────────────
-  const KEYWORDS = [
+  const DEFAULT_KEYWORDS = [
     'CEO', 'Founder', 'CO-Founder', 'Co-Founder',
     'Project Manager', 'CTO', 'Looking for Developer',
   ];
 
-  // All timing in ms — adaptive polling used instead of most fixed sleeps
+  // Adaptive timing — polling replaces most fixed sleeps for speed
   const D = {
-    afterScroll:   400,
-    profileLoad:  2000,   // extra wait after panel appears (content loads async)
-    betweenUsers:  800,   // pause between users after panel closes
-    scrollPause:   500,   // pause while pre-scanning member list
-    panelTimeout: 4000,   // max wait for panel to appear
-    closeTimeout: 2500,   // max wait for panel to disappear
+    afterScroll:    180,   // ms after scrolling to row before clicking
+    profileLoad:   2200,   // max ms to wait for username el to appear (adaptive)
+    extraLoad:      150,   // small extra ms after username el found (bio needs time)
+    betweenUsers:   350,   // ms after panel closes before next user
+    scrollPause:    300,   // ms pause while pre-scanning member list
+    panelTimeout:  3000,   // max ms waiting for panel to open
+    closeTimeout:  1800,   // max ms waiting for panel to close
   };
 
   let isRunning     = false;
@@ -135,6 +137,20 @@
         if (!getProfilePanel()) return resolve();
         if (Date.now() - t > ms) return resolve();
         setTimeout(check, 120);
+      })();
+    });
+  }
+
+  // Wait until the username element is present in the panel (signals content is loaded)
+  function waitForProfileContent(panel, timeout) {
+    const ms = timeout || D.profileLoad;
+    return new Promise((resolve) => {
+      const t = Date.now();
+      (function check() {
+        if (!panel.isConnected) return resolve(false);
+        if (panel.querySelector('[class*="userTagUsername"]')) return resolve(true);
+        if (Date.now() - t > ms) return resolve(false);
+        setTimeout(check, 100);
       })();
     });
   }
@@ -262,21 +278,16 @@
     return bioLines.join(' ').trim().slice(0, 220);
   }
 
-  function matchJobTitle(text) {
+  // Finds the first matching keyword in text (case-insensitive)
+  function matchKeyword(text, keywords) {
     const t = text.toLowerCase();
-    if (t.includes('ceo'))                                 return 'CEO';
-    if (t.includes('cto'))                                 return 'CTO';
-    if (t.includes('co-founder') || t.includes('cofounder')) return 'CO-Founder';
-    if (t.includes('founder'))                             return 'Founder';
-    if (t.includes('project manager'))                     return 'Project Manager';
-    if (t.includes('looking for developer'))               return 'Looking for Developer';
-    return null;
+    return keywords.find((k) => t.includes(k.toLowerCase())) || null;
   }
 
   // ─── MAIN SEARCH LOOP ────────────────────────────────────────────────────
-  async function runSearch() {
+  async function runSearch(keywords) {
     if (isRunning || !hasAppMount()) return;
-    isRunning     = true;
+    isRunning      = true;
     abortRequested = false;
 
     await setStats({ searched: 0, total: 0, found: 0, status: 'running' });
@@ -312,8 +323,10 @@
         continue;
       }
 
-      // ── Step 4: Give it extra time to fully load (bio, roles, etc.) ────
-      await sleep(D.profileLoad);
+      // ── Step 4: Adaptive wait — poll until username element is present ─
+      await waitForProfileContent(panel);
+      await sleep(D.extraLoad); // tiny buffer for bio to render
+
       const loaded = getProfilePanel();
       if (!loaded) {
         searched++;
@@ -321,29 +334,26 @@
         continue;
       }
 
-      // ── Step 5: Check for keywords ─────────────────────────────────────
-      const text     = (loaded.innerText || loaded.textContent || '').trim();
-      const jobTitle = matchJobTitle(text);
-      const hit      = jobTitle || KEYWORDS.some((k) => text.toLowerCase().includes(k.toLowerCase()));
+      // ── Step 5: Check for keyword matches ─────────────────────────────
+      const text    = (loaded.innerText || loaded.textContent || '').trim();
+      const matched = matchKeyword(text, keywords);
 
-      if (hit) {
+      if (matched) {
         const displayName = extractDisplayName(loaded);
         const username    = extractUsername(loaded, displayName);
         const bio         = extractBio(loaded);
-        const title       = jobTitle || KEYWORDS.find((k) => text.toLowerCase().includes(k.toLowerCase())) || 'Match';
 
         results.push({
           displayName:    displayName || 'Unknown',
           username:       username    || '—',
-          jobTitle:       title,
+          jobTitle:       matched,
           profileSnippet: bio         || '—',
         });
         await setStats({ found: results.length });
-        // Save incrementally so every match is visible immediately
         await chrome.storage.local.set({ discordFinderResults: [...results] });
       }
 
-      // ── Step 6: Close the panel and wait for it to fully disappear ─────
+      // ── Step 6: Close panel and wait for it to fully disappear ─────────
       dismissPanel();
       await waitForPanelGone();
       await sleep(D.betweenUsers);
