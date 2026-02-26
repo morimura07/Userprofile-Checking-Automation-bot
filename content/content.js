@@ -29,15 +29,16 @@
     'Project Manager', 'CTO', 'Looking for Developer',
   ];
 
-  // Adaptive timing — polling replaces most fixed sleeps for speed
+  // Timing — same fast path for all users (no extra wait for no-bio)
   const D = {
-    afterScroll:    180,   // ms after scrolling to row before clicking
-    profileLoad:   2200,   // max ms to wait for username el to appear (adaptive)
-    extraLoad:      150,   // small extra ms after username el found (bio needs time)
-    betweenUsers:   350,   // ms after panel closes before next user
-    scrollPause:    300,   // ms pause while pre-scanning member list
-    panelTimeout:  3000,   // max ms waiting for panel to open
-    closeTimeout:  1800,   // max ms waiting for panel to close
+    afterScroll:      180,   // ms after scrolling to row before clicking
+    profileLoad:     2200,   // max ms to wait for username el to appear
+    extraLoad:        250,   // ms after username before reading panel (lets bio appear if present)
+    betweenUsers:     350,   // ms after panel closes before next user
+    scrollStep:       200,   // px to scroll member list to reveal next batch (virtualized list)
+    afterScrollStep:  280,   // ms after scrolling before reading new rows
+    panelTimeout:    3000,   // max ms waiting for panel to open
+    closeTimeout:    1800,   // max ms waiting for panel to close
   };
 
   let isRunning     = false;
@@ -53,6 +54,27 @@
         chrome.storage.local.set({ discordFinderStats: { ...prev, ...update } }, resolve);
       });
     });
+  }
+
+  // Simulate a real user click: full mouse sequence + coordinates from element center
+  function simulateHumanClick(element) {
+    const rect = element.getBoundingClientRect();
+    const clientX = rect.left + rect.width / 2;
+    const clientY = rect.top + rect.height / 2;
+    const opts = {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+      buttons: 1,
+      button: 0,
+      clientX,
+      clientY,
+      screenX: clientX + (window.screenX || 0),
+      screenY: clientY + (window.screenY || 0),
+    };
+    element.dispatchEvent(new MouseEvent('mousedown', opts));
+    element.dispatchEvent(new MouseEvent('mouseup', opts));
+    element.dispatchEvent(new MouseEvent('click', opts));
   }
 
   // ─── MEMBER LIST ─────────────────────────────────────────────────────────
@@ -80,29 +102,37 @@
     return Array.from(container.querySelectorAll('[role="listitem"]'));
   }
 
-  function scrollContainer(container) {
-    const sp = container.closest('[class*="scroll"]') || container.parentElement;
-    if (sp) sp.scrollTop = sp.scrollHeight;
+  function getRowId(row) {
+    const id = row.getAttribute('data-list-item-id');
+    if (id) return id;
+    return (row.textContent || '').slice(0, 80).trim() || null;
   }
 
-  async function collectAllMemberRows(container) {
-    const seen = new Set();
-    const collected = [];
-    let stable = 0;
-    let lastCount = 0;
-
-    while (stable < 3) {
-      for (const row of getMemberRows(container)) {
-        const key = row.getAttribute('data-list-item-id') || row.textContent.slice(0, 50);
-        if (key && !seen.has(key)) { seen.add(key); collected.push(row); }
-      }
-      if (collected.length === lastCount) stable++;
-      else stable = 0;
-      lastCount = collected.length;
-      scrollContainer(container);
-      await sleep(D.scrollPause);
+  function getScrollParent(container) {
+    if (!container) return null;
+    let el = container.closest('[class*="scroll"]') || container.parentElement;
+    while (el) {
+      if (el.scrollHeight > el.clientHeight) return el;
+      el = el.parentElement;
     }
-    return collected;
+    return container.closest('[class*="scroll"]') || container.parentElement;
+  }
+
+  function scrollMemberListToTop(container) {
+    const sp = getScrollParent(container);
+    if (sp) sp.scrollTop = 0;
+  }
+
+  function scrollMemberListDown(container, amount) {
+    const sp = getScrollParent(container);
+    if (!sp) return;
+    sp.scrollTop = Math.min(sp.scrollTop + amount, sp.scrollHeight - sp.clientHeight);
+  }
+
+  function isMemberListAtBottom(container) {
+    const sp = getScrollParent(container);
+    if (!sp) return true;
+    return sp.scrollTop + sp.clientHeight >= sp.scrollHeight - 2;
   }
 
   // ─── PROFILE PANEL ───────────────────────────────────────────────────────
@@ -299,70 +329,74 @@
     const container = getMemberListContainer();
     if (!container) { isRunning = false; return; }
 
-    const rows = await collectAllMemberRows(container);
-    await setStats({ total: rows.length });
+    scrollMemberListToTop(container);
+    await sleep(D.afterScrollStep);
 
     const results = [];
-    let searched  = 0;
+    const processedIds = new Set();
+    let searched = 0;
 
-    for (let i = 0; i < rows.length && !abortRequested; i++) {
-      // ── Step 1: Ensure any open panel is closed first ──────────────────
-      if (getProfilePanel()) {
+    function processLoadedPanel(loaded) {
+      const text = (loaded.innerText || loaded.textContent || '').trim();
+      const matched = matchKeyword(text, keywords);
+      if (matched) {
+        results.push({
+          displayName:    extractDisplayName(loaded) || 'Unknown',
+          username:       extractUsername(loaded, extractDisplayName(loaded)) || '—',
+          jobTitle:       matched,
+          profileSnippet: extractBio(loaded) || '—',
+        });
+        return true;
+      }
+      return false;
+    }
+
+    function openAndWaitForProfile(row) {
+      return new Promise((resolve) => {
+        (async () => {
+          if (getProfilePanel()) { dismissPanel(); await waitForPanelGone(); }
+          row.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+          await sleep(D.afterScroll);
+          simulateHumanClick(row);
+          const panel = await waitForPanel();
+          if (!panel) return resolve(null);
+          await waitForProfileContent(panel);
+          await sleep(D.extraLoad);
+          resolve(getProfilePanel());
+        })();
+      });
+    }
+
+    // Scroll from top, process each visible member once, then scroll down (single pass)
+    while (!abortRequested) {
+      const rows = getMemberRows(container);
+      let newInThisRound = 0;
+
+      for (const row of rows) {
+        if (abortRequested) break;
+        const id = getRowId(row);
+        if (!id || processedIds.has(id)) continue;
+
+        processedIds.add(id);
+        newInThisRound++;
+        searched++;
+
+        const loaded = await openAndWaitForProfile(row);
+
+        if (loaded && processLoadedPanel(loaded)) {
+          await setStats({ total: processedIds.size, searched, found: results.length });
+          await chrome.storage.local.set({ discordFinderResults: [...results] });
+        }
+
         dismissPanel();
         await waitForPanelGone();
+        await sleep(D.betweenUsers);
+        await setStats({ total: processedIds.size, searched });
       }
 
-      // ── Step 2: Scroll to the member row and click it ──────────────────
-      const row = rows[i];
-      row.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-      await sleep(D.afterScroll);
-      row.click();
-
-      // ── Step 3: Wait for the profile panel to appear ───────────────────
-      const panel = await waitForPanel();
-      if (!panel) {
-        searched++;
-        await setStats({ searched });
-        continue;
-      }
-
-      // ── Step 4: Adaptive wait — poll until username element is present ─
-      await waitForProfileContent(panel);
-      await sleep(D.extraLoad); // tiny buffer for bio to render
-
-      const loaded = getProfilePanel();
-      if (!loaded) {
-        searched++;
-        await setStats({ searched });
-        continue;
-      }
-
-      // ── Step 5: Check for keyword matches ─────────────────────────────
-      const text    = (loaded.innerText || loaded.textContent || '').trim();
-      const matched = matchKeyword(text, keywords);
-
-      if (matched) {
-        const displayName = extractDisplayName(loaded);
-        const username    = extractUsername(loaded, displayName);
-        const bio         = extractBio(loaded);
-
-        results.push({
-          displayName:    displayName || 'Unknown',
-          username:       username    || '—',
-          jobTitle:       matched,
-          profileSnippet: bio         || '—',
-        });
-        await setStats({ found: results.length });
-        await chrome.storage.local.set({ discordFinderResults: [...results] });
-      }
-
-      // ── Step 6: Close panel and wait for it to fully disappear ─────────
-      dismissPanel();
-      await waitForPanelGone();
-      await sleep(D.betweenUsers);
-
-      searched++;
-      await setStats({ searched });
+      if (isMemberListAtBottom(container) && newInThisRound === 0) break;
+      scrollMemberListDown(container, D.scrollStep);
+      await sleep(D.afterScrollStep);
     }
 
     await setStats({ status: 'done' });

@@ -1,4 +1,4 @@
-/* Discord Profile Finder – Popup (Dark) */
+/* Discord Profile Finder – Side Panel (Dark) */
 :root {
   --bg-primary:    #1e1f22;
   --bg-secondary:  #2b2d31;
@@ -22,7 +22,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  width: 340px;
+  min-width: 320px;
+  max-width: 100%;
   font-family: var(--font-sans);
   font-size: 14px;
   color: var(--text-primary);
@@ -39,39 +40,12 @@ body {
 
 /* ── Header ─────────────────────────────────────────────────────────── */
 .popup-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
 }
 
 .header-left {
   min-width: 0;
-}
-
-.sidebar-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
-}
-.sidebar-btn:hover {
-  background: var(--border);
-  color: var(--text-primary);
-}
-.sidebar-btn svg {
-  width: 20px;
-  height: 20px;
 }
 
 .logo {

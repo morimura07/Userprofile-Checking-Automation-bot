@@ -14,7 +14,6 @@
   const kwAddBtn     = document.getElementById('kwAddBtn');
   const kwTags       = document.getElementById('kwTags');
   const kwCounter    = document.getElementById('kwCounter');
-  const sidebarBtn   = document.getElementById('sidebarBtn');
 
   // ─── Keyword defaults ────────────────────────────────────────────────────
   const DEFAULT_KEYWORDS = [
@@ -88,12 +87,6 @@
 
   kwAddBtn.addEventListener('click', () => addKeyword(kwInput.value));
   kwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addKeyword(kwInput.value); });
-
-  sidebarBtn.addEventListener('click', () => {
-    chrome.windows.getCurrent((win) => {
-      chrome.sidePanel.open({ windowId: win.id });
-    });
-  });
 
   // ─── Stats / progress ────────────────────────────────────────────────────
   function clearError() {
