@@ -15,6 +15,8 @@
   const kwTags       = document.getElementById('kwTags');
   const kwCounter    = document.getElementById('kwCounter');
   const sidebarBtn   = document.getElementById('sidebarBtn');
+  const openaiKeyInput = document.getElementById('openaiKeyInput');
+  const openaiKeySave  = document.getElementById('openaiKeySave');
 
   // ─── Keyword defaults ────────────────────────────────────────────────────
   const DEFAULT_KEYWORDS = [
@@ -228,6 +230,17 @@
     if (area === 'local' && (changes.discordFinderStats || changes.discordFinderResults)) {
       renderStats();
     }
+  });
+
+  // ─── OpenAI API key ──────────────────────────────────────────────────────
+  chrome.storage.local.get(['discordFinderOpenAiKey'], (data) => {
+    openaiKeyInput.value = data.discordFinderOpenAiKey || '';
+  });
+  openaiKeySave.addEventListener('click', () => {
+    const key = (openaiKeyInput.value || '').trim();
+    chrome.storage.local.set({ discordFinderOpenAiKey: key });
+    openaiKeySave.textContent = 'Saved';
+    setTimeout(() => { openaiKeySave.textContent = 'Save'; }, 1500);
   });
 
   // ─── Init ────────────────────────────────────────────────────────────────
