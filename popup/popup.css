@@ -395,6 +395,38 @@ body {
 }
 .btn-stop:hover { background: var(--danger-hover); }
 
+/* Settings (OpenAI) */
+.settings-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.settings-row {
+  display: flex;
+  gap: 7px;
+}
+
+.settings-row .kw-input { flex: 1; }
+
+.settings-hint {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 /* ── Footer ─────────────────────────────────────────────────────────── */
 .popup-footer {
   padding-top: 10px;
