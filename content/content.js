@@ -192,6 +192,64 @@
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
   }
 
+  // ─── SERVER / CHANNEL CONTEXT ─────────────────────────────────────────────
+  // Prefer DOM: server name is in the header (e.g. h2 with class containing "name", or aria-label "Server Name (server)")
+  function getDiscordContext() {
+    const app = document.getElementById('app-mount');
+    let serverName = '';
+    let channelName = '';
+
+    if (app) {
+      // Server name: container with aria-label ending with "(server)" or containing ", server)"
+      const serverContainer = app.querySelector('[aria-label*="(server)"], [aria-label*=", server)"]');
+      if (serverContainer) {
+        const label = (serverContainer.getAttribute('aria-label') || '').trim();
+        const m = label.match(/^(.+?)\s*\(server\)\s*$/i);
+        if (m) serverName = m[1].trim();
+        if (!serverName) {
+          const h2 = serverContainer.querySelector('h2');
+          if (h2) serverName = (h2.textContent || '').trim();
+        }
+      }
+      if (!serverName) {
+        const guildH2 = app.querySelector('h2[class*="name"]');
+        if (guildH2) serverName = (guildH2.textContent || '').trim();
+      }
+
+      // Channel name: main content header has div.titleWrapper containing h1 with channel name (e.g. "general")
+      const titleWrapper = app.querySelector('[class*="titleWrapper"]');
+      if (titleWrapper) {
+        const h1 = titleWrapper.querySelector('h1');
+        if (h1) {
+          const chText = (h1.textContent || '').trim();
+          if (chText && chText.length < 80) channelName = chText.startsWith('#') ? chText : '#' + chText;
+        }
+      }
+      if (!channelName) {
+        const selectedChannel = app.querySelector('[class*="channel"][aria-selected="true"], [data-list-item-id^="channel"] [aria-selected="true"]');
+        if (selectedChannel) {
+          const chText = (selectedChannel.textContent || '').trim();
+          if (chText && chText.length < 80) channelName = chText.startsWith('#') ? chText : '#' + chText;
+        }
+      }
+    }
+
+    // Fallback: parse document.title e.g. "# channel | Server - Discord"
+    if (!serverName || !channelName) {
+      const title = (document.title || '').trim();
+      const withoutSuffix = title.replace(/\s*[-–—]\s*Discord\s*$/i, '').trim();
+      const parts = withoutSuffix.split(/\s*\|\s*/).map((s) => s.trim()).filter(Boolean);
+      if (parts.length >= 2 && !serverName) serverName = parts[1];
+      if (parts.length >= 2 && !channelName) channelName = parts[0];
+      if (parts.length === 1 && !serverName) serverName = parts[0];
+    }
+
+    return {
+      serverName: serverName || '',
+      channelName: channelName || '',
+    };
+  }
+
   // ─── DATA EXTRACTION ─────────────────────────────────────────────────────
 
   // Display Name: Discord uses a div with class containing "nickname" for the display name
@@ -335,6 +393,7 @@
     const results = [];
     const processedIds = new Set();
     let searched = 0;
+    const { serverName, channelName } = getDiscordContext();
 
     function processLoadedPanel(loaded) {
       const text = (loaded.innerText || loaded.textContent || '').trim();
@@ -345,6 +404,8 @@
           username:       extractUsername(loaded, extractDisplayName(loaded)) || '—',
           jobTitle:       matched,
           profileSnippet: extractBio(loaded) || '—',
+          serverName:     serverName || '—',
+          channelName:    channelName || '—',
         });
         return true;
       }

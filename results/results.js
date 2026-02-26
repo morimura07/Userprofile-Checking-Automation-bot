@@ -31,6 +31,8 @@
           (r, i) => `
         <tr data-username="${escapeAttr(r.username)}">
           <td>${i + 1}</td>
+          <td class="col-server">${escapeHtml(r.serverName)}</td>
+          <td class="col-channel">${escapeHtml(r.channelName)}</td>
           <td class="col-name">${escapeHtml(r.displayName)}</td>
           <td class="col-username">${escapeHtml(r.username)}</td>
           <td class="col-role">${escapeHtml(r.jobTitle)}</td>
