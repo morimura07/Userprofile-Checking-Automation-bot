@@ -4,12 +4,61 @@
   const emptyState = document.getElementById('emptyState');
   const foundCountEl = document.getElementById('foundCount');
   const toast = document.getElementById('toast');
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const modalClose = document.getElementById('modalClose');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalAvatar = document.getElementById('modalAvatar');
+  const modalAvatarInitial = document.getElementById('modalAvatarInitial');
+  const modalUsername = document.getElementById('modalUsername');
+  const modalBio = document.getElementById('modalBio');
+  const modalCopy = document.getElementById('modalCopy');
+  const modalAiBtn = document.getElementById('modalAiBtn');
 
   function showToast() {
     toast.classList.add('visible');
     clearTimeout(toast._tid);
     toast._tid = setTimeout(() => toast.classList.remove('visible'), 2000);
   }
+
+  function openModal(r) {
+    modalTitle.textContent = r.displayName || '—';
+    const initial = (r.displayName && r.displayName.trim()) ? r.displayName.trim().charAt(0) : '?';
+    modalAvatarInitial.textContent = initial;
+    const prevImg = modalAvatar.querySelector('img');
+    if (prevImg) prevImg.remove();
+    if (r.avatarUrl) {
+      const img = document.createElement('img');
+      img.src = r.avatarUrl;
+      img.alt = '';
+      modalAvatar.appendChild(img);
+      modalAvatarInitial.style.display = 'none';
+    } else {
+      modalAvatarInitial.style.display = '';
+    }
+    modalUsername.textContent = r.username ? (r.username.startsWith('@') ? r.username : '@' + r.username) : '—';
+    modalUsername.dataset.rawUsername = r.username || '';
+    modalBio.textContent = (r.profileSnippet && r.profileSnippet.trim()) ? r.profileSnippet.trim() : '—';
+    modalOverlay.classList.add('visible');
+    modalOverlay.setAttribute('aria-hidden', 'false');
+    modalClose.focus();
+  }
+
+  function closeModal() {
+    modalOverlay.classList.remove('visible');
+    modalOverlay.setAttribute('aria-hidden', 'true');
+  }
+
+  modalBackdrop.addEventListener('click', closeModal);
+  modalClose.addEventListener('click', closeModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalOverlay.classList.contains('visible')) closeModal();
+  });
+
+  modalCopy.addEventListener('click', () => {
+    const raw = modalUsername.dataset.rawUsername || '';
+    if (raw) navigator.clipboard.writeText(raw).then(() => showToast());
+  });
 
   function render() {
     chrome.storage.local.get(['discordFinderResults'], (data) => {
@@ -42,12 +91,8 @@
         )
         .join('');
 
-      tbody.querySelectorAll('tr').forEach((row) => {
-        row.addEventListener('click', () => {
-          const username = row.getAttribute('data-username') || '';
-          const text = decodeURIComponent(username);
-          navigator.clipboard.writeText(text).then(() => showToast());
-        });
+      tbody.querySelectorAll('tr').forEach((row, i) => {
+        row.addEventListener('click', () => openModal(results[i]));
       });
     });
   }
